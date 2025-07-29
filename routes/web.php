@@ -7,6 +7,13 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Frontend\ProductController as FrontendProductController;
 
+// --- ROUTE DEBUGGING SEMENTARA UNTUK MELIHAT KONFIGURASI PHP ---
+// PENTING: Hapus route ini setelah debugging selesai karena mengekspos informasi server sensitif.
+Route::get('/phpinfo', function () {
+    return phpinfo();
+});
+// --- AKHIR ROUTE DEBUGGING SEMENTARA ---
+
 // ----------------------------------------------------------------------
 // 1. ROUTE UNTUK HALAMAN AWAL (ROOT URL: /) - PUBLIK & REDIREKSI LOGIN
 // Ini akan menjadi route pertama yang dicari.

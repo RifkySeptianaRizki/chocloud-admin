@@ -21,6 +21,7 @@
       "DB_DATABASE": "choclouddb_bravetouch",
       "DB_USERNAME": "choclouddb_bravetouch",
       "DB_PASSWORD": "5a86f8035230cbb781e526d9b0b95966b51f73c7",
+  
       "APP_CONFIG_CACHE": "/tmp/config.php",
       "APP_EVENTS_CACHE": "/tmp/events.php",
       "APP_PACKAGES_CACHE": "/tmp/packages.php",

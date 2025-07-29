@@ -20,7 +20,7 @@
         </div>
     @endif
 
-    <form id="productEditForm" action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data">
+    <form id="productEditForm" action="{{ route('admin.products.update', $product->id) }}" method="POST"> {{-- HAPUS enctype="multipart/form-data" --}}
         @csrf
         @method('PATCH')
 
@@ -70,9 +70,7 @@
         </div>
         <div class="mb-3">
             <label for="image_file" class="form-label">Ganti Gambar (Opsional)</label>
-            {{-- --- KRUSIAL: PASTIKAN INPUT FILE INI TIDAK MEMILIKI ATRIBUT 'name' --- --}}
             <input type="file" id="image_file" class="form-control @error('image') is-invalid @enderror">
-            {{-- ------------------------------------------------------------------- --}}
             <small class="text-muted">Kosongkan jika tidak ingin mengubah gambar. Format: JPEG, PNG, JPG, WEBP. Ukuran maksimal: 2MB.</small>
             @error('image')
                 <div class="invalid-feedback">{{ $message }}</div>
@@ -163,18 +161,7 @@
                         alert('Gambar berhasil diunggah ke Cloudinary!');
                     } else {
                         console.error('Cloudinary upload failed with status:', xhr.status, 'Response text:', xhr.responseText);
-                        let errorMessage = 'Gagal mengunggah gambar. Status: ' + xhr.status + ' ' + xhr.statusText;
-                        try {
-                            const errorResponse = JSON.parse(xhr.responseText);
-                            if (errorResponse && errorResponse.error && errorResponse.error.message) {
-                                errorMessage = 'Gagal mengunggah gambar: ' + errorResponse.error.message;
-                            } else if (errorResponse && errorResponse.message) {
-                                errorMessage = 'Gagal mengunggah gambar: ' + errorResponse.message;
-                            }
-                        } catch (e) {
-                            console.error('Tidak dapat mengurai respon error Cloudinary:', e);
-                            errorMessage += '. Respon tidak dapat dibaca atau formatnya salah.';
-                        }
+                        let errorMessage = 'Gagal mengunggah gambar: ' + (JSON.parse(xhr.responseText).error.message || xhr.statusText);
                         alert(errorMessage);
                         uploadProgress.style.display = 'none';
                         submitButton.disabled = true;
@@ -197,10 +184,63 @@
                 xhr.send(formData);
             });
 
-            productEditForm.addEventListener('submit', function(event) {
+            // --- UTAMA: Handle form submission via AJAX ---
+            productEditForm.addEventListener('submit', async function(event) {
+                event.preventDefault(); // Mencegah submit form bawaan
+
+                // Pastikan gambar sudah diupload jika file dipilih
                 if (imageFileInput.files.length > 0 && !imageUrlHiddenInput.value) {
                     alert('Mohon tunggu hingga gambar selesai diunggah.');
-                    event.preventDefault();
+                    return; // Hentikan proses jika gambar belum siap
+                }
+
+                submitButton.disabled = true; // Nonaktifkan tombol saat submit dimulai
+
+                // Kumpulkan data form
+                const formData = new FormData(this);
+                const data = {};
+                for (let [key, value] of formData.entries()) {
+                    data[key] = value;
+                }
+
+                // Tambahkan _method PATCH secara eksplisit
+                data._method = 'PATCH';
+
+                try {
+                    const response = await fetch(this.action, {
+                        method: 'POST', // Method POST karena _method PATCH di data
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': data._token // Ambil CSRF token
+                        },
+                        body: JSON.stringify(data) // Kirim data sebagai JSON
+                    });
+
+                    const responseData = await response.json(); // Coba parse JSON
+
+                    if (response.ok) {
+                        alert(responseData.message || 'Perubahan berhasil disimpan!');
+                        window.location.href = "{{ route('admin.products.index') }}"; // Redirect ke daftar produk
+                    } else {
+                        console.error('Server error during form submission:', responseData);
+                        let errorMessage = 'Gagal menyimpan perubahan. ';
+                        if (responseData.message) {
+                            errorMessage += responseData.message;
+                        }
+                        if (responseData.errors) {
+                            // Tampilkan error validasi Laravel
+                            for (const field in responseData.errors) {
+                                errorMessage += `\n${field}: ${responseData.errors[field].join(', ')}`;
+                            }
+                        }
+                        alert(errorMessage);
+                    }
+                } catch (error) {
+                    console.error('Network or unexpected error during form submission:', error);
+                    alert('Terjadi kesalahan tidak terduga saat menyimpan perubahan.');
+                } finally {
+                    submitButton.disabled = false; // Aktifkan kembali tombol submit
                 }
             });
         });

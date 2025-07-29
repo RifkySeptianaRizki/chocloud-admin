@@ -39,7 +39,7 @@
             @enderror
         </div>
         <div class="mb-3">
-            <label for="description" class="form-label">Deskripsi</label>
+            <label for="description" class="form-label">Deskripsi</labe`l>
             <textarea name="description" id="description" class="form-control @error('description') is-invalid @enderror" rows="3">{{ old('description') }}</textarea>
             @error('description')
                 <div class="invalid-feedback">{{ $message }}</div>
@@ -87,10 +87,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const cloudName = "{{ env('CLOUDINARY_CLOUD_NAME') }}"; // Ambil dari env vars Laravel
-            // --- SESUAIKAN BARIS INI DENGAN NAMA UPLOAD PRESET CLOUDINARY ANDA ---
-            const uploadPreset = "chocloud_unsigned_preset"; // GANTI DENGAN NAMA UPLOAD PRESET ANDA (yang Anda buat di dashboard Cloudinary)
-            // ---------------------------------------------------------------------
+            const cloudName = document.querySelector('meta[name="cloudinary-cloud-name"]').content;
+            const uploadPreset = "chocloud_unsigned_preset"; // <--- GANTI INI DENGAN NAMA UPLOAD PRESET ANDA
 
             const imageFileInput = document.getElementById('image_file');
             const imageUrlHiddenInput = document.getElementById('image_url_hidden');
@@ -101,28 +99,31 @@
             const submitButton = document.getElementById('submitButton');
             const productForm = document.getElementById('productForm');
 
-            // Awalnya tombol submit dinonaktifkan sampai gambar diupload
             submitButton.disabled = true;
 
             imageFileInput.addEventListener('change', function() {
                 const file = this.files[0];
                 if (!file) return;
 
-                // Reset progress bar dan preview
+                // --- DEBUGGING: LOGGING NILAI SEBELUM UPLOAD ---
+                console.log('--- Memulai Proses Upload Cloudinary ---');
+                console.log('Cloud Name yang digunakan:', cloudName);
+                console.log('Upload Preset yang digunakan:', uploadPreset);
+                console.log('File yang dipilih:', file.name, 'Ukuran:', file.size, 'bytes');
+                // ----------------------------------------------
+
                 progressBar.style.width = '0%';
                 progressBar.textContent = '0%';
                 uploadProgress.style.display = 'none';
                 imagePreview.style.display = 'none';
                 imagePreview.src = '';
-                submitButton.disabled = true; // Nonaktifkan submit saat ada upload baru
+                submitButton.disabled = true;
 
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', uploadPreset);
-                // Opsional: Jika Anda ingin mengatur folder langsung dari frontend
-                // formData.append('folder', 'chocloud/products_from_frontend');
 
-                uploadProgress.style.display = 'block'; // Tampilkan progress bar
+                uploadProgress.style.display = 'block';
 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
@@ -138,18 +139,33 @@
                 xhr.onload = function() {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         const data = JSON.parse(xhr.responseText);
-                        imageUrlHiddenInput.value = data.secure_url; // Simpan URL gambar yang aman
-                        imagePublicIdHiddenInput.value = data.public_id; // Simpan public_id
+                        imageUrlHiddenInput.value = data.secure_url;
+                        imagePublicIdHiddenInput.value = data.public_id;
                         imagePreview.src = data.secure_url;
                         imagePreview.style.display = 'block';
-                        uploadProgress.style.display = 'none'; // Sembunyikan progress bar
-                        submitButton.disabled = false; // Aktifkan tombol submit
+                        uploadProgress.style.display = 'none';
+                        submitButton.disabled = false;
                         alert('Gambar berhasil diunggah ke Cloudinary!');
                     } else {
-                        console.error('Error uploading to Cloudinary:', xhr.responseText);
-                        alert('Gagal mengunggah gambar: ' + (JSON.parse(xhr.responseText).error.message || xhr.statusText));
+                        // --- DEBUGGING: LOG DAN ALERT LEBIH DETAIL SAAT GAGAL ---
+                        console.error('Cloudinary upload failed with status:', xhr.status, 'Response text:', xhr.responseText);
+                        let errorMessage = 'Gagal mengunggah gambar. Status: ' + xhr.status + ' ' + xhr.statusText;
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            if (errorResponse && errorResponse.error && errorResponse.error.message) {
+                                errorMessage = 'Gagal mengunggah gambar: ' + errorResponse.error.message;
+                            } else if (errorResponse && errorResponse.message) { // Beberapa API pakai 'message'
+                                errorMessage = 'Gagal mengunggah gambar: ' + errorResponse.message;
+                            }
+                        } catch (e) {
+                            console.error('Tidak dapat mengurai respon error Cloudinary:', e);
+                            errorMessage += '. Respon tidak dapat dibaca atau formatnya salah.';
+                        }
+                        alert(errorMessage);
+                        // --------------------------------------------------------
+
                         uploadProgress.style.display = 'none';
-                        submitButton.disabled = true; // Tetap nonaktif jika upload gagal
+                        submitButton.disabled = true;
                     }
                 };
 
@@ -160,18 +176,15 @@
                     submitButton.disabled = true;
                 };
 
-                xhr.send(formData); // Kirim formData via XHR
+                xhr.send(formData);
             });
 
-            // Penting: Nonaktifkan validasi HTML5 bawaan form untuk input file yang disembunyikan
-            // Karena kita mengelola validasi file secara manual via JS
             productForm.addEventListener('submit', function() {
-                // Pastikan gambar sudah diupload (ada URL di hidden input) jika file dipilih
                 if (imageFileInput.files.length > 0 && !imageUrlHiddenInput.value) {
                     alert('Mohon tunggu hingga gambar selesai diunggah.');
-                    return false; // Mencegah submit form
+                    return false;
                 }
-                return true; // Izinkan submit form
+                return true;
             });
         });
     </script>

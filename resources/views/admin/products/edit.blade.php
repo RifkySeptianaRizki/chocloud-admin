@@ -4,14 +4,12 @@
 @section('content')
     <h1>Edit Produk: {{ $product->name }}</h1>
 
-    {{-- Tampilkan pesan sukses jika ada --}}
     @if (session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
         </div>
     @endif
 
-    {{-- Tampilkan pesan error validasi umum jika ada --}}
     @if ($errors->any())
         <div class="alert alert-danger">
             <ul>
@@ -72,7 +70,9 @@
         </div>
         <div class="mb-3">
             <label for="image_file" class="form-label">Ganti Gambar (Opsional)</label>
+            {{-- --- KRUSIAL: PASTIKAN INPUT FILE INI TIDAK MEMILIKI ATRIBUT 'name' --- --}}
             <input type="file" id="image_file" class="form-control @error('image') is-invalid @enderror">
+            {{-- ------------------------------------------------------------------- --}}
             <small class="text-muted">Kosongkan jika tidak ingin mengubah gambar. Format: JPEG, PNG, JPG, WEBP. Ukuran maksimal: 2MB.</small>
             @error('image')
                 <div class="invalid-feedback">{{ $message }}</div>
@@ -91,9 +91,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- UBAH CARA MENGAMBIL CLOUD NAME DARI META TAG ---
             const cloudName = document.querySelector('meta[name="cloudinary-cloud-name"]').content;
-            // ----------------------------------------------------
             const uploadPreset = "chocloud_unsigned_preset"; // <--- GANTI INI DENGAN NAMA UPLOAD PRESET ANDA
 
             const imageFileInput = document.getElementById('image_file');
@@ -164,8 +162,20 @@
                         submitButton.disabled = false;
                         alert('Gambar berhasil diunggah ke Cloudinary!');
                     } else {
-                        console.error('Error uploading to Cloudinary:', xhr.status, 'Response text:', xhr.responseText);
-                        alert('Gagal mengunggah gambar: ' + (JSON.parse(xhr.responseText).error.message || xhr.statusText));
+                        console.error('Cloudinary upload failed with status:', xhr.status, 'Response text:', xhr.responseText);
+                        let errorMessage = 'Gagal mengunggah gambar. Status: ' + xhr.status + ' ' + xhr.statusText;
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            if (errorResponse && errorResponse.error && errorResponse.error.message) {
+                                errorMessage = 'Gagal mengunggah gambar: ' + errorResponse.error.message;
+                            } else if (errorResponse && errorResponse.message) {
+                                errorMessage = 'Gagal mengunggah gambar: ' + errorResponse.message;
+                            }
+                        } catch (e) {
+                            console.error('Tidak dapat mengurai respon error Cloudinary:', e);
+                            errorMessage += '. Respon tidak dapat dibaca atau formatnya salah.';
+                        }
+                        alert(errorMessage);
                         uploadProgress.style.display = 'none';
                         submitButton.disabled = true;
                         imagePreview.src = imageUrlHiddenInput.value;

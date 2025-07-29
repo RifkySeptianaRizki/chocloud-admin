@@ -28,44 +28,41 @@
         <tr>
             <td>{{ $testimonial->customer_name }}</td>
             <td>
-                {{-- AWAL DARI BLOK LOGIKA VIDEO --}}
-                @if ($testimonial->video_url) {{-- <-- IF LUAR (1) DIBUKA --}}
+                {{-- ⭐ FIX #1: Logika Video URL Disederhanakan --}}
+                @if ($testimonial->video_url)
                     @php
-                        $videoUrl = $testimonial->video_url;
+                        $url = $testimonial->video_url;
+                        $embedHtml = '';
+
+                        // Logika untuk YouTube (lebih andal)
+                        if (Str::contains($url, ['youtube.com', 'youtu.be/'])) {
+                            $pattern = '/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/';
+                            if (preg_match($pattern, $url, $matches)) {
+                                $embedUrl = 'https://www.youtube.com/embed/' . $matches[1];
+                                $embedHtml = '<div class="ratio ratio-16x9 mb-2"><iframe src="' . $embedUrl . '" title="Testimoni Video YouTube" allowfullscreen></iframe></div>';
+                            }
+                        } 
+                        // Logika untuk Instagram
+                        elseif (Str::contains($url, 'instagram.com')) {
+                            $embedHtml = '<blockquote class="instagram-media" data-instgrm-permalink="' . $url . '" data-instgrm-version="14" style="max-width:320px; min-width:320px;"></blockquote>';
+                        }
+                        // Logika untuk Twitter/X
+                        elseif (Str::contains($url, ['twitter.com', 'x.com'])) {
+                            $embedHtml = '<blockquote class="twitter-tweet"><a href="' . $url . '"></a></blockquote>';
+                        }
+                        // Logika untuk TikTok
+                        elseif (Str::contains($url, 'tiktok.com')) {
+                            $videoId = basename(parse_url($url, PHP_URL_PATH));
+                            $embedHtml = '<blockquote class="tiktok-embed" data-video-id="' . $videoId . '" style="max-width: 325px; min-width: 325px;"><section></section></blockquote>';
+                        }
                     @endphp
-
-                    @if (Illuminate\Support\Str::contains($videoUrl, ['youtube.com', 'youtu.be/'])) {{-- <-- IF DALAM (2) DIBUKA --}}
-                        @php
-                            if (str_contains($videoUrl, 'watch?v=')) {
-                                $embedUrl = str_replace('watch?v=', 'embed/', $videoUrl);
-                            }
-                            if (str_contains($videoUrl, 'youtu.be/')) {
-                                $embedUrl = str_replace('youtu.be/', 'youtube.com/embed/', $videoUrl);
-                            }
-                            $embedUrl = strtok($embedUrl, '?');
-                        @endphp
-                        <div class="ratio ratio-16x9 mb-2">
-                            <iframe src="{{ $embedUrl }}" title="Testimoni Video YouTube" allowfullscreen></iframe>
-                        </div>
-
-                    @elseif (Illuminate\Support\Str::contains($videoUrl, 'instagram.com'))
-                        <blockquote class="instagram-media" data-instgrm-permalink="{{ $videoUrl }}" data-instgrm-version="14" style="max-width:320px; min-width:320px;"></blockquote>
-
-                    @elseif (Illuminate\Support\Str::contains($videoUrl, ['twitter.com', 'x.com']))
-                        <blockquote class="twitter-tweet"><a href="{{ $videoUrl }}"></a></blockquote>
-
-                    @elseif (Illuminate\Support\Str::contains($videoUrl, 'tiktok.com'))
-                        <blockquote class="tiktok-embed" data-video-id="{{ basename(parse_url($videoUrl, PHP_URL_PATH)) }}" style="max-width: 325px; min-width: 325px;"> <section></section> </blockquote>
                     
-                    @endif {{-- <-- IF DALAM (2) DITUTUP --}}
-
+                    {!! $embedHtml !!}
                     <p class="card-text fst-italic mt-2">"{{ $testimonial->content }}"</p>
-
-                @else {{-- <-- ELSE UNTUK IF LUAR (1) --}}
+                @else
                     <p class="card-text fst-italic">"{{ $testimonial->content }}"</p>
-
-                @endif {{-- <-- IF LUAR (1) DITUTUP (INI YANG KEMUNGKINAN HILANG) --}}
-                {{-- AKHIR DARI BLOK LOGIKA VIDEO --}}
+                @endif
+                {{-- AKHIR BLOK LOGIKA VIDEO --}}
 
                 <br>
                 <small class="text-muted">Untuk Produk: <strong>{{ $testimonial->product->name ?? 'N/A' }}</strong></small>
@@ -78,19 +75,20 @@
                 @endif
             </td>
             <td>
+                {{-- ⭐ FIX #2: Ganti Form dengan Button untuk AJAX --}}
                 @if($testimonial->status == 'pending')
-                    <form action="{{ route('admin.testimonials.approve', $testimonial) }}" method="POST" class="d-inline">
-                        @csrf
-                        @method('PATCH')
-                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                    </form>
+                    <button class="btn btn-sm btn-success btn-action" 
+                            data-url="{{ route('admin.testimonials.approve', $testimonial->id) }}"
+                            data-method="PATCH">
+                        Approve
+                    </button>
                 @endif
-
-                <form action="{{ route('admin.testimonials.destroy', $testimonial) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus?')">Hapus</button>
-                </form>
+                <button class="btn btn-sm btn-danger btn-action"
+                        data-url="{{ route('admin.testimonials.destroy', $testimonial->id) }}"
+                        data-method="DELETE"
+                        data-confirm="Yakin ingin menghapus testimoni ini?">
+                    Hapus
+                </button>
             </td>
         </tr>
     @empty
@@ -101,3 +99,57 @@
 </tbody>
     </table>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // Script untuk memuat embed social media
+    if (typeof twttr !== 'undefined') twttr.widgets.load();
+    if (typeof instgrm !== 'undefined') instgrm.Embeds.process();
+    // TikTok biasanya memproses otomatis
+
+    document.body.addEventListener('click', async function(e) {
+        if (e.target && e.target.classList.contains('btn-action')) {
+            e.preventDefault();
+
+            const actionButton = e.target;
+            const url = actionButton.dataset.url;
+            const method = actionButton.dataset.method;
+            const confirmation = actionButton.dataset.confirm;
+
+            if (confirmation && !confirm(confirmation)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST', // Selalu POST untuk method spoofing
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        _method: method // Method spoofing (PATCH atau DELETE)
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    window.location.reload(); // Muat ulang halaman untuk melihat perubahan
+                } else {
+                    alert('Error: ' + (result.message || 'Aksi gagal dilakukan.'));
+                }
+            } catch (error) {
+                console.error('Terjadi kesalahan:', error);
+                alert('Terjadi kesalahan saat menghubungi server.');
+            }
+        }
+    });
+});
+</script>
+@endpush

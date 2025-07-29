@@ -1,103 +1,99 @@
 @extends('layouts.admin')
 @section('title', 'Manajemen Produk')
 
-{{-- PENTING: Pastikan layout utama Anda punya <meta name="csrf-token" ...> di <head> --}}
-
 @section('content')
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Daftar Produk</h1>
-        <a href="{{ route('admin.products.create') }}" class="btn btn-primary">Tambah Produk Baru</a>
+<div class="content-card">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-0">Manajemen Produk</h1>
+            <p class="text-white-50">Kelola semua produk yang tersedia di toko Anda.</p>
+        </div>
+        <a href="{{ route('admin.products.create') }}" class="btn btn-glass btn-sm mt-4">
+            <i class="fas fa-plus me-2"></i>Tambah Produk
+        </a>
     </div>
 
-    {{-- Notifikasi akan ditampilkan oleh JavaScript setelah redirect --}}
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <table class="table table-bordered table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th>Gambar</th>
-                <th>Nama Produk</th>
-                <th>Harga</th>
-                <th style="width: 15%;">Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($products as $product)
-                <tr>
-                    <td>
-                        @if ($product->image)
-                            <img src="{{ $product->image }}" alt="{{ $product->name }}" width="100">
-                        @else
-                            <img src="https://via.placeholder.com/100?text=No+Image" alt="No Image" width="100">
-                        @endif
-                    </td>
-                    <td>{{ $product->name }}</td>
-                    <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
-                    <td>
-                        <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                        
-                        {{-- 🔄 PERUBAHAN UTAMA DI SINI: Menggunakan button biasa dengan data-url --}}
-                        <button class="btn btn-sm btn-danger btn-delete" 
-                                data-url="{{ route('admin.products.destroy', $product->id) }}">
-                            Hapus
-                        </button>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="4" class="text-center">Belum ada produk.</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+    {{-- Mengganti Tabel dengan Grid Kartu Produk --}}
+    <div class="row">
+        @forelse ($products as $product)
+            <div class="col-lg-4 col-md-6 mb-4">
+            {{-- Ganti bagian ini di dalam file index.blade.php Anda --}}
+
+<div class="product-card">
+    <img src="{{ $product->image ?? 'https://via.placeholder.com/300x200?text=No+Image' }}" class="product-card-img-top" alt="{{ $product->name }}">
+    
+    {{-- 1. Card-body menjadi flex container vertikal --}}
+    <div class="card-body d-flex flex-column">
+
+        {{-- 2. Konten utama (nama, harga, kategori) dibungkus --}}
+        {{--    Class 'flex-grow-1' membuatnya mengisi ruang kosong --}}
+        <div class="text-center flex-grow-1">
+            @if ($product->category)
+                {{-- Sedikit ubah warna badge agar lebih menarik --}}
+                <span class="badge mb-2" style="background-color: #581c87;">{{ $product->category->name }}</span>
+            @endif
+            <h5 class="card-title">{{ $product->name }}</h5>
+            <p class="card-price">Rp {{ number_format($product->price, 0, ',', '.') }}</p>
+        </div>
+
+        {{-- 3. Tombol aksi akan otomatis terdorong ke bawah --}}
+        <div class="card-actions d-flex justify-content-end mt-3">
+            <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-action-edit me-2">Edit</a>
+            <button class="btn btn-sm btn-action-delete btn-delete" 
+                    data-url="{{ route('admin.products.destroy', $product->id) }}">
+                Hapus
+            </button>
+        </div>
+
+    </div>
+</div>
+            </div>
+        @empty
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <p class="mb-0">Belum ada produk yang ditambahkan.</p>
+                </div>
+            </div>
+        @endforelse
+    </div>
+</div>
 @endsection
 
 
-{{-- PENTING: Pastikan layout utama punya @stack('scripts') sebelum </body> --}}
 @push('scripts')
+{{-- Script JavaScript untuk tombol hapus tidak diubah --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Ambil CSRF token dari meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-    // Gunakan event delegation untuk semua tombol .btn-delete
     document.body.addEventListener('click', async function(e) {
         if (e.target && e.target.classList.contains('btn-delete')) {
             e.preventDefault();
-
             const deleteUrl = e.target.dataset.url;
-
             if (!confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
                 return;
             }
-
             try {
-                // Kirim request ke controller
                 const response = await fetch(deleteUrl, {
-                    method: 'POST', // Gunakan POST untuk method spoofing
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        _method: 'DELETE' // Method spoofing untuk Laravel
-                    })
+                    body: JSON.stringify({ _method: 'DELETE' })
                 });
-
                 const result = await response.json();
-
                 if (response.ok) {
-                    // Jika sukses, tampilkan pesan dan redirect
                     alert(result.message);
-                    window.location.href = result.redirect;
+                    window.location.reload();
                 } else {
-                    // Jika gagal, tampilkan pesan error
                     alert('Error: ' + (result.message || 'Gagal menghapus produk.'));
                 }
-
             } catch (error) {
                 console.error('Terjadi kesalahan:', error);
                 alert('Terjadi kesalahan saat menghubungi server.');

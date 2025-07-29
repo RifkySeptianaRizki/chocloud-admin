@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Category;
 
 class ProductController extends Controller
 {
@@ -15,10 +16,12 @@ class ProductController extends Controller
      * Menampilkan halaman daftar semua produk.
      */
     public function index()
-    {
-        $products = Product::latest()->get();
-        return view('admin.products.index', compact('products'));
-    }
+{
+    // Cukup satu baris ini saja
+    $products = Product::with('category')->latest()->get(); 
+    
+    return view('admin.products.index', compact('products'));
+}
 
     /**
      * Menampilkan form untuk membuat produk baru.
@@ -26,7 +29,8 @@ class ProductController extends Controller
     public function create()
     {
         $cloudName = env('CLOUDINARY_CLOUD_NAME');
-        return view('admin.products.create', compact('cloudName'));
+        $categories = Category::all();
+        return view('admin.products.create', compact('cloudName', 'categories'));
     }
 
     /**
@@ -44,6 +48,7 @@ class ProductController extends Controller
             'image_public_id' => 'required|string',
             'shopee_link' => 'nullable|url',
             'whatsapp_link' => 'nullable|url',
+            'category_id' => 'required|exists:categories,id',
         ]);
 
         if ($validator->fails()) {
@@ -61,7 +66,8 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $cloudName = env('CLOUDINARY_CLOUD_NAME');
-        return view('admin.products.edit', compact('product', 'cloudName'));
+        $categories = Category::all();
+        return view('admin.products.edit', compact('product', 'cloudName', 'categories'));
     }
 
     /**
@@ -79,6 +85,7 @@ class ProductController extends Controller
             'image_public_id' => 'nullable|string',
             'shopee_link' => 'nullable|url',
             'whatsapp_link' => 'nullable|url',
+            'category_id' => 'required|exists:categories,id',
         ]);
 
         if ($validator->fails()) {
@@ -103,6 +110,7 @@ class ProductController extends Controller
             'whatsapp_link' => $data['whatsapp_link'] ?? $product->whatsapp_link,
             'image' => $data['image'] ?? $product->image,
             'image_public_id' => $data['image_public_id'] ?? $product->image_public_id,
+            'category_id' => $data['category_id'],
         ];
 
         $product->update($updateData);

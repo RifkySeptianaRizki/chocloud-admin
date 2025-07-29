@@ -22,11 +22,17 @@ class Product extends Model
         'shopee_link',
         'whatsapp_link',
         'image_public_id',
+        'category_id',
     ];
 
     public function testimonials()
 {
     return $this->hasMany(Testimonial::class);
+}
+
+public function category()
+{
+    return $this->belongsTo(Category::class);
 }
 }
 

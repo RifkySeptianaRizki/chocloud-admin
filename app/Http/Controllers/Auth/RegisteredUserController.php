@@ -15,7 +15,7 @@ use Illuminate\View\View;
 class RegisteredUserController extends Controller
 {
     /**
-     * Display the registration view.
+     * Menampilkan halaman registrasi.
      */
     public function create(): View
     {
@@ -23,7 +23,7 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Handle an incoming registration request.
+     * Menangani permintaan registrasi yang masuk.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -45,6 +45,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // Pengguna diarahkan ke halaman daftar produk admin setelah berhasil registrasi.
+        return redirect()->route('admin.products.index');
     }
 }

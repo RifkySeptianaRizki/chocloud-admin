@@ -10,11 +10,6 @@
         "dest": "/api/index.php"
       }
     ],
-    "php": {
-      "php_max_file_uploads": "20",
-      "php_post_max_size": "25M",
-      "php_upload_max_filesize": "20M"
-    },
     "env": {
       "APP_ENV": "production",
       "APP_DEBUG": "false",

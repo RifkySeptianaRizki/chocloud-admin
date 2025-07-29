@@ -24,7 +24,7 @@
 
     <form id="productEditForm" action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
-        @method('PATCH') {{-- Method penting untuk update --}}
+        @method('PATCH')
 
         <div class="mb-3">
             <label for="name" class="form-label">Nama Produk</label>
@@ -64,7 +64,6 @@
         <div class="mb-3">
             <label class="form-label">Gambar Saat Ini</label>
             <div>
-                {{-- Preview gambar saat ini atau gambar baru --}}
                 <img id="image_preview" src="{{ $product->image ?? '' }}" alt="Preview Gambar" width="150" style="{{ $product->image ? 'display: block;' : 'display: none;' }}">
                 @if(!$product->image)
                     <p id="no_image_text" style="{{ $product->image ? 'display: none;' : 'display: block;' }}">Tidak ada gambar.</p>
@@ -73,19 +72,15 @@
         </div>
         <div class="mb-3">
             <label for="image_file" class="form-label">Ganti Gambar (Opsional)</label>
-            {{-- Input file akan digunakan untuk memilih file, bukan untuk dikirim langsung ke server Laravel --}}
             <input type="file" id="image_file" class="form-control @error('image') is-invalid @enderror">
             <small class="text-muted">Kosongkan jika tidak ingin mengubah gambar. Format: JPEG, PNG, JPG, WEBP. Ukuran maksimal: 2MB.</small>
             @error('image')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
 
-            {{-- Input tersembunyi ini akan menyimpan URL gambar dari Cloudinary --}}
             <input type="hidden" name="image" id="image_url_hidden" value="{{ old('image', $product->image) }}">
-            {{-- Input tersembunyi untuk public_id Cloudinary --}}
             <input type="hidden" name="image_public_id" id="image_public_id_hidden" value="{{ old('image_public_id', $product->image_public_id) }}">
 
-            {{-- Indikator loading saat upload --}}
             <div id="upload_progress" class="progress mt-2" style="display: none;">
                 <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
             </div>
@@ -96,22 +91,23 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const cloudName = "{{ env('CLOUDINARY_CLOUD_NAME') }}";
-            const uploadPreset = "chocloud_unsigned_preset"; // Ganti dengan nama upload preset Anda
+            // --- UBAH CARA MENGAMBIL CLOUD NAME DARI META TAG ---
+            const cloudName = document.querySelector('meta[name="cloudinary-cloud-name"]').content;
+            // ----------------------------------------------------
+            const uploadPreset = "chocloud_unsigned_preset"; // <--- GANTI INI DENGAN NAMA UPLOAD PRESET ANDA
+
             const imageFileInput = document.getElementById('image_file');
             const imageUrlHiddenInput = document.getElementById('image_url_hidden');
             const imagePublicIdHiddenInput = document.getElementById('image_public_id_hidden');
             const imagePreview = document.getElementById('image_preview');
-            const noImageText = document.getElementById('no_image_text'); // Teks "Tidak ada gambar."
+            const noImageText = document.getElementById('no_image_text');
             const uploadProgress = document.getElementById('upload_progress');
             const progressBar = uploadProgress.querySelector('.progress-bar');
             const submitButton = document.getElementById('submitButton');
             const productEditForm = document.getElementById('productEditForm');
 
-            // Inisialisasi status tombol submit: aktif jika sudah ada gambar, nonaktif jika tidak ada
             submitButton.disabled = !imageUrlHiddenInput.value;
 
-            // Handle preview gambar yang sudah ada saat halaman dimuat
             if (imageUrlHiddenInput.value) {
                 imagePreview.src = imageUrlHiddenInput.value;
                 imagePreview.style.display = 'block';
@@ -125,28 +121,26 @@
             imageFileInput.addEventListener('change', function() {
                 const file = this.files[0];
                 if (!file) {
-                    // Jika file dihapus dari input, kembalikan ke kondisi awal
                     imageUrlHiddenInput.value = "";
                     imagePublicIdHiddenInput.value = "";
                     imagePreview.style.display = 'none';
                     if (noImageText) noImageText.style.display = 'block';
-                    submitButton.disabled = true; // Nonaktifkan submit jika tidak ada gambar
+                    submitButton.disabled = true;
                     return;
                 }
 
-                // Reset progress bar dan preview
                 progressBar.style.width = '0%';
                 progressBar.textContent = '0%';
                 uploadProgress.style.display = 'none';
-                imagePreview.style.display = 'none'; // Sembunyikan preview lama saat upload baru
+                imagePreview.style.display = 'none';
                 if (noImageText) noImageText.style.display = 'none';
-                submitButton.disabled = true; // Nonaktifkan submit saat ada upload baru
+                submitButton.disabled = true;
 
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', uploadPreset);
 
-                uploadProgress.style.display = 'block'; // Tampilkan progress bar
+                uploadProgress.style.display = 'block';
 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
@@ -162,19 +156,18 @@
                 xhr.onload = function() {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         const data = JSON.parse(xhr.responseText);
-                        imageUrlHiddenInput.value = data.secure_url; // Simpan URL gambar yang aman
-                        imagePublicIdHiddenInput.value = data.public_id; // Simpan public_id
+                        imageUrlHiddenInput.value = data.secure_url;
+                        imagePublicIdHiddenInput.value = data.public_id;
                         imagePreview.src = data.secure_url;
                         imagePreview.style.display = 'block';
-                        uploadProgress.style.display = 'none'; // Sembunyikan progress bar
-                        submitButton.disabled = false; // Aktifkan tombol submit
+                        uploadProgress.style.display = 'none';
+                        submitButton.disabled = false;
                         alert('Gambar berhasil diunggah ke Cloudinary!');
                     } else {
-                        console.error('Error uploading to Cloudinary:', xhr.responseText);
+                        console.error('Error uploading to Cloudinary:', xhr.status, 'Response text:', xhr.responseText);
                         alert('Gagal mengunggah gambar: ' + (JSON.parse(xhr.responseText).error.message || xhr.statusText));
                         uploadProgress.style.display = 'none';
-                        submitButton.disabled = true; // Tetap nonaktif jika upload gagal
-                        // Kembalikan preview lama jika ada upload gagal
+                        submitButton.disabled = true;
                         imagePreview.src = imageUrlHiddenInput.value;
                         imagePreview.style.display = imageUrlHiddenInput.value ? 'block' : 'none';
                         if (noImageText) noImageText.style.display = imageUrlHiddenInput.value ? 'none' : 'block';
@@ -186,27 +179,19 @@
                     alert('Terjadi kesalahan jaringan saat mengunggah gambar.');
                     uploadProgress.style.display = 'none';
                     submitButton.disabled = true;
-                    // Kembalikan preview lama jika ada upload gagal
                     imagePreview.src = imageUrlHiddenInput.value;
                     imagePreview.style.display = imageUrlHiddenInput.value ? 'block' : 'none';
                     if (noImageText) noImageText.style.display = imageUrlHiddenInput.value ? 'none' : 'block';
                 };
 
-                xhr.send(formData); // Kirim formData via XHR
+                xhr.send(formData);
             });
 
-            // Handle submit form
             productEditForm.addEventListener('submit', function(event) {
-                // Jika input file dipilih dan belum ada URL di hidden input
                 if (imageFileInput.files.length > 0 && !imageUrlHiddenInput.value) {
                     alert('Mohon tunggu hingga gambar selesai diunggah.');
-                    event.preventDefault(); // Mencegah form submit
+                    event.preventDefault();
                 }
-                // Jika input file tidak dipilih DAN tidak ada gambar sebelumnya DAN tombol submit aktif
-                // Ini untuk kasus pengguna menghapus gambar yang sudah ada (input file kosong)
-                // dan ingin submit tanpa gambar baru, tapi required di controller.
-                // Jika gambar itu tidak required, maka tidak perlu check ini.
-                // Jika required, maka alert pengguna.
             });
         });
     </script>

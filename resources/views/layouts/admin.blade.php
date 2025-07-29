@@ -6,6 +6,10 @@
     <title>@yield('title', 'Admin Panel') - Chocloud</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    {{-- --- TAMBAHKAN META TAG INI UNTUK CLOUDINARY CLOUD NAME --- --}}
+    <meta name="cloudinary-cloud-name" content="{{ env('CLOUDINARY_CLOUD_NAME') }}">
+    {{-- -------------------------------------------------------- --}}
+    
     {{-- CSS Kustom untuk Layout Hybrid Responsif --}}
     <style>
         /* Sidebar permanen untuk layar besar (desktop) */
@@ -18,7 +22,7 @@
             padding: 20px;
             background-color: #343a40;
             color: white;
-            z-index: 1000; /* Pastikan sidebar di atas konten lain */
+            z-index: 1000;
         }
 
         /* Konten utama */
@@ -29,20 +33,20 @@
         /* Media query HANYA untuk layar besar (lg -> 992px ke atas) */
         @media (min-width: 992px) {
             .content {
-                margin-left: 250px; /* Geser konten utama HANYA di layar besar */
+                margin-left: 250px;
             }
             .navbar-mobile {
-                display: none; /* Sembunyikan navbar HP di layar besar */
+                display: none;
             }
         }
         
         /* Media query HANYA untuk layar kecil (di bawah 992px) */
         @media (max-width: 991.98px) {
             .sidebar-desktop {
-                display: none; /* Sembunyikan sidebar desktop di layar kecil */
+                display: none;
             }
             body {
-                padding-top: 56px; /* Beri jarak untuk navbar mobile yang fixed-top */
+                padding-top: 56px;
             }
         }
     </style>

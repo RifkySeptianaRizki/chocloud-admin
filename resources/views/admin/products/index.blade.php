@@ -23,11 +23,19 @@
         <tbody>
             @forelse ($products as $product)
                 <tr>
-                    <td><img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" width="100"></td>
+                    <td>
+                        {{-- SESUAIKAN BARIS INI UNTUK CLOUDINARY --}}
+                        @if ($product->image)
+                            <img src="{{ $product->image }}" alt="{{ $product->name }}" width="100">
+                        @else
+                            {{-- Placeholder jika tidak ada gambar --}}
+                            <img src="https://via.placeholder.com/100?text=No+Image" alt="No Image" width="100">
+                        @endif
+                    </td>
                     <td>{{ $product->name }}</td>
                     <td>Rp {{ number_format($product->price) }}</td>
                     <td>
-                    <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-sm btn-warning">Edit</a>
                         <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="d-inline">
                             @csrf
                             @method('DELETE')

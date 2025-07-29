@@ -21,6 +21,7 @@ class Product extends Model
         'image',
         'shopee_link',
         'whatsapp_link',
+        'image_public_id',
     ];
 
     public function testimonials()

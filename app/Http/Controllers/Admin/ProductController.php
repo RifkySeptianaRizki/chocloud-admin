@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
-use Illuminate\Support\Facades\Log;      // --- TAMBAHKAN BARIS INI UNTUK LOGGING ---
-use Illuminate\Support\Facades\Validator; // --- TAMBAHKAN BARIS INI UNTUK VALIDATOR ---
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -34,8 +34,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        // --- PERBAIKAN: Gunakan Validator eksplisit untuk JSON request ---
-        $data = $request->json()->all(); // Ambil semua data JSON
+        $data = $request->json()->all();
 
         $validator = Validator::make($data, [
             'name' => 'required|string|max:255',
@@ -48,34 +47,12 @@ class ProductController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
-            ], 422); // Status 422 untuk validasi gagal
+            return response()->json(['message' => 'Validasi gagal.', 'errors' => $validator->errors()], 422);
         }
-        // --- AKHIR PERBAIKAN VALIDASI ---
 
-        // Buat data produk baru di database
-        Product::create([
-            'name' => $data['name'],
-            'price' => $data['price'],
-            'description' => $data['description'] ?? null, // Tambahkan null coalescing untuk nullable fields
-            'shopee_link' => $data['shopee_link'] ?? null,
-            'whatsapp_link' => $data['whatsapp_link'] ?? null,
-            'image' => $data['image'],
-            'image_public_id' => $data['image_public_id'],
-        ]);
+        Product::create($data);
 
-        // Kirim response JSON untuk AJAX
         return response()->json(['message' => 'Produk berhasil ditambahkan!', 'redirect' => route('admin.products.index')], 200);
-    }
-
-    /**
-     * Menampilkan detail satu produk (tidak kita gunakan, jadi kosongkan saja).
-     */
-    public function show(Product $product)
-    {
-        //
     }
 
     /**
@@ -92,19 +69,7 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        // --- DEBUGGING LOGGING START (TETAPKAN UNTUK DIAGNOSIS) ---
-        Log::info('--- ProductController@update START ---');
-        Log::info('Request Headers (Content-Type): ' . $request->header('Content-Type'));
-        Log::info('Request raw input: ' . $request->getContent());
-        Log::info('Request all() (traditional): ' . json_encode($request->all()));
-        Log::info('Request json()->all() (JSON payload): ' . json_encode($request->json()->all()));
-        Log::info('Request input(\'name\') (traditional): ' . $request->input('name'));
-        Log::info('Request json(\'name\') (JSON): ' . $request->json('name'));
-        Log::info('--- ProductController@update END LOGGING ---');
-        // --- DEBUGGING LOGGING END ---
-
-        // --- PERBAIKAN: Gunakan Validator eksplisit untuk JSON request ---
-        $data = $request->json()->all(); // Ambil semua data JSON ke dalam array $data
+        $data = $request->json()->all();
 
         $validator = Validator::make($data, [
             'name' => 'required|string|max:255',
@@ -117,48 +82,55 @@ class ProductController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
-            ], 422); // Status 422 untuk validasi gagal
-        }
-        // --- AKHIR PERBAIKAN VALIDASI ---
-
-        // Logika untuk menghapus gambar lama dari Cloudinary
-        if (
-            $product->image_public_id && // Cek kalau produk punya public_id lama
-            (!isset($data['image_public_id']) || // Kalau public_id baru tidak ada (gambar dihapus)
-             $data['image_public_id'] !== $product->image_public_id) // Atau public_id baru beda (gambar diganti)
-        ) {
-            Cloudinary::destroy($product->image_public_id);
+            return response()->json(['message' => 'Validasi gagal.', 'errors' => $validator->errors()], 422);
         }
 
-        // Update data produk di database
-        $product->update([
+        // Logika untuk menghapus gambar lama dari Cloudinary jika diganti
+        if ($product->image_public_id && (!isset($data['image_public_id']) || $data['image_public_id'] !== $product->image_public_id)) {
+            try {
+                Cloudinary::destroy($product->image_public_id);
+            } catch (\Exception $e) {
+                Log::error('Gagal menghapus gambar lama dari Cloudinary: ' . $e->getMessage());
+            }
+        }
+
+        // Gunakan data baru atau fallback ke data lama jika tidak ada perubahan
+        $updateData = [
             'name' => $data['name'],
             'price' => $data['price'],
-            'description' => $data['description'] ?? null,
-            'shopee_link' => $data['shopee_link'] ?? null,
-            'whatsapp_link' => $data['whatsapp_link'] ?? null,
-            'image' => $data['image'] ?? $product->image, // Gunakan image baru dari data atau image lama dari product
-            'image_public_id' => $data['image_public_id'] ?? $product->image_public_id, // Gunakan public_id baru dari data atau public_id lama dari product
-        ]);
+            'description' => $data['description'] ?? $product->description,
+            'shopee_link' => $data['shopee_link'] ?? $product->shopee_link,
+            'whatsapp_link' => $data['whatsapp_link'] ?? $product->whatsapp_link,
+            'image' => $data['image'] ?? $product->image,
+            'image_public_id' => $data['image_public_id'] ?? $product->image_public_id,
+        ];
 
-        // Kirim response JSON untuk AJAX
+        $product->update($updateData);
+
         return response()->json(['message' => 'Perubahan berhasil disimpan!', 'redirect' => route('admin.products.index')], 200);
     }
 
     /**
-     * Menghapus produk dari database.
+     * Menghapus produk dari database dan gambar dari Cloudinary.
      */
     public function destroy(Product $product)
     {
+        // Hapus gambar dari Cloudinary jika ada public_id
         if ($product->image_public_id) {
-            Cloudinary::destroy($product->image_public_id);
+            try {
+                Cloudinary::destroy($product->image_public_id);
+            } catch (\Exception $e) {
+                Log::error('Gagal menghapus gambar dari Cloudinary: ' . $e->getMessage());
+            }
         }
 
+        // Hapus produk dari database
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('success', 'Produk berhasil dihapus!');
+        // Kirim respons JSON
+        return response()->json([
+            'message' => 'Produk berhasil dihapus!',
+            'redirect' => route('admin.products.index')
+        ], 200);
     }
 }

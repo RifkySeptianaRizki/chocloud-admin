@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product; // 👈 Impor model Product
+use App\Models\Product;
 use Illuminate\Http\Request;
-// use Illuminate\Support\Facades\Storage; // 👈 TIDAK DIGUNAKAN LAGI UNTUK CLOUDINARY FILE UPLOAD
-use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary; // 👈 IMPOR FACADE CLOUDINARY
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class ProductController extends Controller
 {
@@ -15,10 +14,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        // Ambil semua data produk, urutkan dari yang paling baru
         $products = Product::latest()->get();
-
-        // Tampilkan view dan kirim data products ke dalamnya
         return view('admin.products.index', compact('products'));
     }
 
@@ -45,18 +41,19 @@ class ProductController extends Controller
             'whatsapp_link' => 'nullable|url',
         ]);
 
-        // 2. Simpan gambar ke Cloudinary
-        $imageCloudinaryUrl = null; // Inisialisasi
-        $imagePublicId = null; // Untuk menyimpan public_id jika Anda ingin menghapus nanti
+        $imageCloudinaryUrl = null;
+        $imagePublicId = null;
 
+        // 2. Simpan gambar ke Cloudinary
         if ($request->hasFile('image')) {
-            // Upload file ke Cloudinary
-            $uploadedFile = Cloudinary::upload($request->file('image')->getRealPath(), [
+            // UBAH BARIS INI: Hapus `->getRealPath()`
+            // Sekarang Anda langsung mengirim objek UploadedFile ke Cloudinary::upload()
+            $uploadedFile = Cloudinary::upload($request->file('image'), [
                 'folder' => 'chocloud/products', // Folder di Cloudinary (opsional)
             ]);
 
-            $imageCloudinaryUrl = $uploadedFile->getSecurePath(); // Ambil URL HTTPS gambar
-            $imagePublicId = $uploadedFile->getPublicId(); // Ambil Public ID gambar
+            $imageCloudinaryUrl = $uploadedFile->getSecurePath();
+            $imagePublicId = $uploadedFile->getPublicId();
         }
 
         // 3. Buat data produk baru di database
@@ -66,11 +63,10 @@ class ProductController extends Controller
             'description' => $request->description,
             'shopee_link' => $request->shopee_link,
             'whatsapp_link' => $request->whatsapp_link,
-            'image' => $imageCloudinaryUrl, // Simpan URL Cloudinary
-            'image_public_id' => $imagePublicId, // Simpan public_id (penting untuk hapus/update)
+            'image' => $imageCloudinaryUrl,
+            'image_public_id' => $imagePublicId,
         ]);
 
-        // 4. Redirect kembali ke halaman daftar produk dengan pesan sukses
         return redirect()->route('admin.products.index')->with('success', 'Produk berhasil ditambahkan!');
     }
 
@@ -106,8 +102,8 @@ class ProductController extends Controller
             'whatsapp_link' => 'nullable|url',
         ]);
 
-        $imageCloudinaryUrl = $product->image; // Gunakan URL gambar lama sebagai default
-        $imagePublicId = $product->image_public_id; // Gunakan public_id lama sebagai default
+        $imageCloudinaryUrl = $product->image;
+        $imagePublicId = $product->image_public_id;
 
         // 2. Cek jika ada gambar baru yang di-upload
         if ($request->hasFile('image')) {
@@ -116,8 +112,9 @@ class ProductController extends Controller
                 Cloudinary::destroy($product->image_public_id);
             }
             // Simpan gambar baru ke Cloudinary
-            $uploadedFile = Cloudinary::upload($request->file('image')->getRealPath(), [
-                'folder' => 'chocloud/products', // Pastikan folder sama
+            // UBAH BARIS INI: Hapus `->getRealPath()`
+            $uploadedFile = Cloudinary::upload($request->file('image'), [
+                'folder' => 'chocloud/products',
             ]);
             $imageCloudinaryUrl = $uploadedFile->getSecurePath();
             $imagePublicId = $uploadedFile->getPublicId();
@@ -131,10 +128,9 @@ class ProductController extends Controller
             'shopee_link' => $request->shopee_link,
             'whatsapp_link' => $request->whatsapp_link,
             'image' => $imageCloudinaryUrl,
-            'image_public_id' => $imagePublicId, // Simpan public_id yang diperbarui
+            'image_public_id' => $imagePublicId,
         ]);
 
-        // 4. Redirect kembali dengan pesan sukses
         return redirect()->route('admin.products.index')->with('success', 'Produk berhasil diperbarui!');
     }
 

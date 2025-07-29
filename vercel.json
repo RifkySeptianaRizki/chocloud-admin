@@ -2,7 +2,14 @@
     "version": 2,
     "framework": null,
     "functions": {
-      "api/index.php": { "runtime": "vercel-php@0.6.0" }
+      "api/index.php": {
+        "runtime": "vercel-php@0.6.0",
+        "php": {
+          "php_max_file_uploads": "20",
+          "php_post_max_size": "25M",
+          "php_upload_max_filesize": "20M"
+        }
+      }
     },
     "routes": [
       {
@@ -12,8 +19,8 @@
     ],
     "env": {
       "APP_ENV": "production",
-      "APP_DEBUG": "true",
-      "APP_URL": "",
+      "APP_DEBUG": "false",
+      "APP_URL": "", 
       "APP_KEY": "base64:C4ZdXM4rtK0hakQyaEBGh/qQnEQku6w9xqcPr7VTzsI=",
       "DB_CONNECTION": "mysql",
       "DB_HOST": "qhhujc.h.filess.io",
@@ -27,9 +34,13 @@
       "APP_ROUTES_CACHE": "/tmp/routes.php",
       "APP_SERVICES_CACHE": "/tmp/services.php",
       "VIEW_COMPILED_PATH": "/tmp/views",
-
+  
       "CACHE_DRIVER": "array",
       "LOG_CHANNEL": "stderr",
-      "SESSION_DRIVER": "cookie"
+      "SESSION_DRIVER": "cookie",
+  
+      "CLOUDINARY_CLOUD_NAME": "cloudinary_3d_10887b24-c21c-4d7b-85ed-3746ccd4bf8e",
+      "CLOUDINARY_API_KEY": "265987366368481",
+      "CLOUDINARY_API_SECRET": "O5kJHH3EJoapBNFB1Fo5RMcTTlM"
     }
   }

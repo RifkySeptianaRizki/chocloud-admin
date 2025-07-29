@@ -20,7 +20,7 @@
         </div>
     @endif
 
-    <form id="productEditForm" action="{{ route('admin.products.update', $product->id) }}" method="POST"> {{-- HAPUS enctype="multipart/form-data" --}}
+    <form id="productEditForm" action="{{ route('admin.products.update', $product->id) }}" method="POST"> {{-- Tanpa enctype="multipart/form-data" --}}
         @csrf
         @method('PATCH')
 
@@ -184,7 +184,7 @@
                 xhr.send(formData);
             });
 
-            // --- UTAMA: Handle form submission via AJAX ---
+            // --- UTAMA: Handle form submission via AJAX (PASTIKAN SELALU MENGIRIM JSON) ---
             productEditForm.addEventListener('submit', async function(event) {
                 event.preventDefault(); // Mencegah submit form bawaan
 
@@ -196,25 +196,29 @@
 
                 submitButton.disabled = true; // Nonaktifkan tombol saat submit dimulai
 
-                // Kumpulkan data form
-                const formData = new FormData(this);
-                const data = {};
-                for (let [key, value] of formData.entries()) {
-                    data[key] = value;
-                }
-
-                // Tambahkan _method PATCH secara eksplisit
-                data._method = 'PATCH';
+                // --- GANTI CARA MENGUMPULKAN DATA INI UNTUK MEMASTIKAN JSON MURNI ---
+                const data = {
+                    _token: document.querySelector('input[name="_token"]').value, // CSRF token
+                    _method: 'PATCH', // Untuk method spoofing di Laravel
+                    name: document.getElementById('name').value,
+                    price: document.getElementById('price').value,
+                    description: document.getElementById('description').value,
+                    shopee_link: document.getElementById('shopee_link').value,
+                    whatsapp_link: document.getElementById('whatsapp_link').value,
+                    image: document.getElementById('image_url_hidden').value,
+                    image_public_id: document.getElementById('image_public_id_hidden').value
+                };
+                // ---------------------------------------------------------------------
 
                 try {
                     const response = await fetch(this.action, {
                         method: 'POST', // Method POST karena _method PATCH di data
                         headers: {
-                            'Content-Type': 'application/json',
+                            'Content-Type': 'application/json', // <--- KRUSIAL: Selalu set Content-Type ke JSON
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': data._token // Ambil CSRF token
                         },
-                        body: JSON.stringify(data) // Kirim data sebagai JSON
+                        body: JSON.stringify(data) // <--- KRUSIAL: Kirim data sebagai JSON string
                     });
 
                     const responseData = await response.json(); // Coba parse JSON

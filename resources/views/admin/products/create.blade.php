@@ -22,7 +22,7 @@
         </div>
     @endif
 
-    <form id="productForm" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
+    <form id="productForm" action="{{ route('admin.products.store') }}" method="POST"> {{-- Tanpa enctype="multipart/form-data" --}}
         @csrf
         <div class="mb-3">
             <label for="name" class="form-label">Nama Produk</label>
@@ -179,12 +179,66 @@
                 xhr.send(formData);
             });
 
-            productForm.addEventListener('submit', function() {
+            productForm.addEventListener('submit', async function(event) {
+                event.preventDefault(); // Mencegah submit form bawaan
+
+                // Pastikan gambar sudah diupload jika file dipilih
                 if (imageFileInput.files.length > 0 && !imageUrlHiddenInput.value) {
                     alert('Mohon tunggu hingga gambar selesai diunggah.');
-                    return false;
+                    return; // Hentikan proses jika gambar belum siap
                 }
-                return true;
+
+                submitButton.disabled = true; // Nonaktifkan tombol saat submit dimulai
+
+                // --- GANTI CARA MENGUMPULKAN DATA INI UNTUK MEMASTIKAN JSON MURNI ---
+                const data = {
+                    _token: document.querySelector('input[name="_token"]').value, // CSRF token
+                    // name dan input lainnya diambil secara manual
+                    name: document.getElementById('name').value,
+                    price: document.getElementById('price').value,
+                    description: document.getElementById('description').value, // Ambil langsung value dari textarea
+                    shopee_link: document.getElementById('shopee_link').value,
+                    whatsapp_link: document.getElementById('whatsapp_link').value,
+                    image: document.getElementById('image_url_hidden').value,
+                    image_public_id: document.getElementById('image_public_id_hidden').value
+                };
+                // ---------------------------------------------------------------------
+
+                try {
+                    const response = await fetch(this.action, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json', // Kirim sebagai JSON
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': data._token // Ambil CSRF token
+                        },
+                        body: JSON.stringify(data) // Kirim data sebagai JSON string
+                    });
+
+                    const responseData = await response.json();
+
+                    if (response.ok) {
+                        alert(responseData.message || 'Produk berhasil disimpan!');
+                        window.location.href = "{{ route('admin.products.index') }}";
+                    } else {
+                        console.error('Server error during form submission:', responseData);
+                        let errorMessage = 'Gagal menyimpan produk. ';
+                        if (responseData.message) {
+                            errorMessage += responseData.message;
+                        }
+                        if (responseData.errors) {
+                            for (const field in responseData.errors) {
+                                errorMessage += `\n${field}: ${responseData.errors[field].join(', ')}`;
+                            }
+                        }
+                        alert(errorMessage);
+                    }
+                } catch (error) {
+                    console.error('Network or unexpected error during form submission:', error);
+                    alert('Terjadi kesalahan tidak terduga saat menyimpan produk.');
+                } finally {
+                    submitButton.disabled = false;
+                }
             });
         });
     </script>

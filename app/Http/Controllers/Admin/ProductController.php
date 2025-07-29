@@ -31,20 +31,6 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        // --- DEBUGGING START (INI AKAN MENGHENTIKAN EKSEKUSI DI VERCEL) ---
-        // INI PENTING UNTUK MENDIAGNOSA KENAPA UPLOAD GAGAL!
-        dd(
-            'DEBUG INFO:',
-            '1. PHP_INI_SET_post_max_size (from env): ' . getenv('PHP_INI_SET_post_max_size'),
-            '2. PHP_INI_SET_upload_max_filesize (from env): ' . getenv('PHP_INI_SET_upload_max_filesize'),
-            '3. Request has file image: ' . $request->hasFile('image'),
-            '4. Content of $request->file(\'image\'): ',
-            $request->file('image'), // Akan null jika tidak ada file valid yang diterima
-            '5. All request data (termasuk non-file): ',
-            $request->all() // Periksa apakah "image" adalah {} atau array kosong
-        );
-        // --- DEBUGGING END ---
-
 
         // 1. Validasi input dari form
         $request->validate([

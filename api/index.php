@@ -1,10 +1,37 @@
 <?php
-// api/index.php
 
-// --- PAKSA BATAS UKURAN UPLOAD SECARA LANGSUNG DI PHP INI ---
-ini_set('upload_max_filesize', '20M');
-ini_set('post_max_size', '25M');
-// --- AKHIR PAKSA BATAS UKURAN UPLOAD ---
+// public/index.php
+
+
+use Illuminate\Http\Request; // Baris ini seharusnya sudah ada di public/index.php
+
+define('LARAVEL_START', microtime(true));
+
+/*
+|--------------------------------------------------------------------------
+| Check If The Application Is Under Maintenance
+|--------------------------------------------------------------------------
+|
+| If the application is in maintenance mode via the "down" command we
+| will require this file so that any requests are gracefully stopped
+| while the application is undergoing maintenance and updates.
+|
+*/
+
+if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
+    require $maintenance;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Register The Auto Loader
+|--------------------------------------------------------------------------
+|
+| Composer provides a convenient, auto-loading mechanism for applications
+| to load their classes without requiring a lot of (erroneous) setup.
+| Install it at will.
+|
+*/
 
 require __DIR__.'/../vendor/autoload.php';
 
@@ -21,4 +48,10 @@ require __DIR__.'/../vendor/autoload.php';
 
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+
+$response = tap($kernel->handle(
+    $request = Request::capture()
+))->send();
+
+$kernel->terminate($request, $response);
